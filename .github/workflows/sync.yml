@@ -1,0 +1,39 @@
+name: 同步BPB面板
+
+on:
+schedule:
+- cron: "0 */3 * * *"   # 每3小时同步一次
+workflow_dispatch:
+
+permissions:
+contents: write
+
+jobs:
+sync:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
+
+  - name: Sync with upstream
+    run: |
+      git config --global user.name "github-actions[bot]"
+      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # 添加上游仓库
+      git remote add upstream https://github.com/bia-pain-bache/BPB-Worker-Panel.git || true
+
+      # 拉取上游更新
+      git fetch upstream
+
+      # 自动识别分支
+      git checkout main || git checkout master
+
+      # 合并上游
+      git merge upstream/main --no-edit || git merge upstream/master --no-edit
+
+      # 推送到你的 fork
+      git push origin HEAD
+```
