@@ -1,49 +1,46 @@
-name: Sync Upstream BPB-Worker-Panel
+name: 同步BPB面板项目
 
 on:
-schedule:
-- cron: "0 */3 * * *"
-workflow_dispatch:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
 
 permissions:
-contents: write
+  contents: write
 
 jobs:
-sync:
-runs-on: ubuntu-latest
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-```
-steps:
-  - name: Checkout fork
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
+      - name: Set git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-  - name: Set git identity
-    run: |
-      git config user.name "github-actions[bot]"
-      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/bia-pain-bache/BPB-Worker-Panel.git || true
+          git fetch upstream
 
-  - name: Add upstream
-    run: |
-      git remote add upstream https://github.com/bia-pain-bache/BPB-Worker-Panel.git || true
-      git fetch upstream
+      - name: Detect default branch
+        id: branch
+        run: |
+          DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+          echo "branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
 
-  - name: Detect default branch
-    id: branch
-    run: |
-      DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
-      echo "branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+      - name: Checkout local branch
+        run: |
+          git checkout -B ${{ steps.branch.outputs.branch }} origin/${{ steps.branch.outputs.branch }}
 
-  - name: Checkout local branch
-    run: |
-      git checkout -B ${{ steps.branch.outputs.branch }} origin/${{ steps.branch.outputs.branch }}
+      - name: Merge upstream
+        run: |
+          git merge upstream/${{ steps.branch.outputs.branch }} --no-edit || echo "Already up to date"
 
-  - name: Merge upstream
-    run: |
-      git merge upstream/${{ steps.branch.outputs.branch }} --no-edit || echo "Already up to date"
-
-  - name: Push changes
-    run: |
-      git push origin ${{ steps.branch.outputs.branch }}
-```
+      - name: Push changes
+        run: |
+          git push origin ${{ steps.branch.outputs.branch }}
