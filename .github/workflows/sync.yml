@@ -1,8 +1,8 @@
-name: 同步BPB面板
+name: Sync Upstream BPB-Worker-Panel
 
 on:
 schedule:
-- cron: "0 */3 * * *"   # 每3小时同步一次
+- cron: "0 */3 * * *"
 workflow_dispatch:
 
 permissions:
@@ -14,26 +14,36 @@ runs-on: ubuntu-latest
 
 ```
 steps:
-  - name: Checkout repository
+  - name: Checkout fork
     uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
 
-  - name: Sync with upstream
+  - name: Set git identity
     run: |
-      git config --global user.name "github-actions[bot]"
-      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      git config user.name "github-actions[bot]"
+      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # 添加上游仓库
+  - name: Add upstream
+    run: |
       git remote add upstream https://github.com/bia-pain-bache/BPB-Worker-Panel.git || true
-
-      # 拉取上游更新
       git fetch upstream
 
-      # 自动识别分支
-      git checkout main || git checkout master
+  - name: Detect default branch
+    id: branch
+    run: |
+      DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+      echo "branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
 
-      # 合并上游
-      git merge upstream/main --no-edit || git merge upstream/master --no-edit
+  - name: Checkout local branch
+    run: |
+      git checkout -B ${{ steps.branch.outputs.branch }} origin/${{ steps.branch.outputs.branch }}
 
-      # 推送到你的 fork
-      git push origin HEAD
+  - name: Merge upstream
+    run: |
+      git merge upstream/${{ steps.branch.outputs.branch }} --no-edit || echo "Already up to date"
+
+  - name: Push changes
+    run: |
+      git push origin ${{ steps.branch.outputs.branch }}
 ```
